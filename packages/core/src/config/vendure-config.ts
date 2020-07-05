@@ -310,7 +310,7 @@ export interface OrderProcessOptions<T extends string> {
         fromState: T,
         toState: T,
         data: { order: Order },
-    ): boolean | Promise<boolean> | Observable<boolean> | void;
+    ): boolean | Promise<boolean> | Observable<boolean> | void | string;
     /**
      * @description
      * Define logic to run after a state transition has taken place.
