@@ -112,6 +112,7 @@ export class OrderService {
             .leftJoinAndSelect('lines.items', 'items')
             .leftJoinAndSelect('items.fulfillment', 'fulfillment')
             .leftJoinAndSelect('lines.taxCategory', 'lineTaxCategory')
+            .leftJoinAndSelect('order.shippingMethod', 'shippingMethod')
             .where('order.id = :orderId', { orderId })
             .addOrderBy('lines.createdAt', 'ASC')
             .addOrderBy('items.createdAt', 'ASC')
