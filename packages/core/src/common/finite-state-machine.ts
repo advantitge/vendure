@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
 export type Transitions<T extends string> = {
     [S in T]: {
         to: T[];
-    }
+    };
 };
 
 /**
@@ -68,6 +68,7 @@ export class FSM<T extends string, Data = any> {
                     ? await transitionResult.toPromise()
                     : transitionResult);
                 if (canTransition === false) {
+                    this.onError(this._currentState, state);
                     return;
                 } else if (typeof canTransition === 'string') {
                     this.onError(this._currentState, state, canTransition);
