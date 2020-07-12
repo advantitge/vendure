@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { HistoryEntryType } from '@vendure/common/lib/generated-types';
+import { isObservable } from 'rxjs';
 
 import { RequestContext } from '../../../api/common/request-context';
 import { IllegalOperationError } from '../../../common/error/errors';
@@ -92,26 +93,35 @@ export class OrderStateMachine {
         } = this.configService.orderOptions.process;
 
         const allTransitions = this.mergeTransitionDefinitions(orderStateTransitions, transitions);
+        const orderProcessStrategy = this.configService.orderOptions.orderProcessStrategy;
 
         return {
             transitions: allTransitions,
             onTransitionStart: async (fromState, toState, data) => {
-                if (typeof onTransitionStart === 'function') {
-                    const result = onTransitionStart(fromState, toState, data);
-                    if (result === false || typeof result === 'string') {
-                        return result;
-                    }
+                const result =
+                    typeof orderProcessStrategy.onTransitionStart === 'function'
+                        ? orderProcessStrategy.onTransitionStart(fromState, toState, data)
+                        : typeof onTransitionStart === 'function'
+                        ? onTransitionStart(fromState, toState, data)
+                        : undefined;
+                const resolvedResult = await (isObservable(result) ? await result.toPromise() : result);
+                if (resolvedResult === false || typeof resolvedResult === 'string') {
+                    return resolvedResult;
                 }
                 return this.onTransitionStart(fromState, toState, data);
             },
-            onTransitionEnd: (fromState, toState, data) => {
-                if (typeof onTransitionEnd === 'function') {
-                    return onTransitionEnd(fromState, toState, data);
+            onTransitionEnd: async (fromState, toState, data) => {
+                if (typeof orderProcessStrategy.onTransitionEnd === 'function') {
+                    await orderProcessStrategy.onTransitionEnd(fromState, toState, data);
+                } else if (typeof onTransitionEnd === 'function') {
+                    onTransitionEnd(fromState, toState, data);
                 }
                 return this.onTransitionEnd(fromState, toState, data);
             },
-            onError: (fromState, toState, message) => {
-                if (typeof onTransitionError === 'function') {
+            onError: async (fromState, toState, message) => {
+                if (typeof orderProcessStrategy.onTransitionError === 'function') {
+                    await orderProcessStrategy.onTransitionError(fromState, toState, message);
+                } else if (typeof onTransitionError === 'function') {
                     onTransitionError(fromState, toState, message);
                 }
                 throw new IllegalOperationError(message || 'error.cannot-transition-order-from-to', {

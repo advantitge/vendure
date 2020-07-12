@@ -20,6 +20,7 @@ import { CustomFields } from './custom-field/custom-field-types';
 import { EntityIdStrategy } from './entity-id-strategy/entity-id-strategy';
 import { JobQueueStrategy } from './job-queue/job-queue-strategy';
 import { VendureLogger } from './logger/vendure-logger';
+import { OrderProcessStrategy } from './order-process-strategy/order-process-strategy';
 import { OrderMergeStrategy } from './order/order-merge-strategy';
 import { PriceCalculationStrategy } from './order/price-calculation-strategy';
 import { PaymentMethodHandler } from './payment-method/payment-method-handler';
@@ -257,6 +258,12 @@ export interface OrderOptions {
      * Defines custom states and transition logic for the order process state machine.
      */
     process?: OrderProcessOptions<string>;
+    /**
+     * @description
+     * Defines custom states and transition logic for the order process state machine.
+     * Should be used over {@link OrderProcessOptions}.
+     */
+    orderProcessStrategy?: OrderProcessStrategy<string>;
     /**
      * @description
      * Defines the strategy used to merge a guest Order and an existing Order when

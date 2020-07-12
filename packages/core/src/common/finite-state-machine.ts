@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
 export type Transitions<T extends string> = {
     [S in T]: {
         to: T[];
-    }
+    };
 };
 
 /**
@@ -24,7 +24,7 @@ export type StateMachineConfig<T extends string, Data = undefined> = {
         data: Data,
     ): boolean | string | void | Promise<boolean | string | void> | Observable<boolean | string | void>;
     onTransitionEnd?(fromState: T, toState: T, data: Data): void | Promise<void>;
-    onError?(fromState: T, toState: T, message?: string): void;
+    onError?(fromState: T, toState: T, message?: string): void | Promise<void>;
 };
 
 /**
@@ -60,7 +60,7 @@ export class FSM<T extends string, Data = any> {
     transitionTo(state: T, data?: Data): void;
     async transitionTo(state: T, data: Data) {
         if (this.canTransitionTo(state)) {
-            // If the onTransitionStart callback is defined, invoke it. If it returns false,
+            // If the onTransitionStart callback is defined, invoke it. If it returns false or a string,
             // then the transition will be cancelled.
             if (typeof this.config.onTransitionStart === 'function') {
                 const transitionResult = this.config.onTransitionStart(this._currentState, state, data);
@@ -68,9 +68,10 @@ export class FSM<T extends string, Data = any> {
                     ? await transitionResult.toPromise()
                     : transitionResult);
                 if (canTransition === false) {
+                    await this.onError(this._currentState, state);
                     return;
                 } else if (typeof canTransition === 'string') {
-                    this.onError(this._currentState, state, canTransition);
+                    await this.onError(this._currentState, state, canTransition);
                     return;
                 }
             }
@@ -82,7 +83,7 @@ export class FSM<T extends string, Data = any> {
                 await this.config.onTransitionEnd(fromState, state, data);
             }
         } else {
-            return this.onError(this._currentState, state);
+            return await this.onError(this._currentState, state);
         }
     }
 
@@ -108,9 +109,9 @@ export class FSM<T extends string, Data = any> {
         return -1 < this.config.transitions[this._currentState].to.indexOf(state);
     }
 
-    private onError(fromState: T, toState: T, message?: string) {
+    private async onError(fromState: T, toState: T, message?: string) {
         if (typeof this.config.onError === 'function') {
-            return this.config.onError(fromState, toState, message);
+            return await this.config.onError(fromState, toState, message);
         }
     }
 }

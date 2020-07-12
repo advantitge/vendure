@@ -95,6 +95,7 @@ export const defaultConfig: RuntimeVendureConfig = {
         mergeStrategy: new MergeOrdersStrategy(),
         checkoutMergeStrategy: new UseGuestStrategy(),
         process: {},
+        orderProcessStrategy: {},
         generateOrderCode: () => generatePublicId(),
     },
     paymentOptions: {
