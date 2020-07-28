@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 
 import { ConfigModule } from '../config/config.module';
-import { DataImportModule } from '../data-import/data-import.module';
 import { EventBusModule } from '../event-bus/event-bus.module';
 import { HealthCheckModule } from '../health-check/health-check.module';
 import { JobQueueModule } from '../job-queue/job-queue.module';
@@ -28,7 +27,7 @@ import { WorkerServiceModule } from '../worker/worker-service.module';
  */
 @Module({
     imports: [
-        DataImportModule,
+        // DataImportModule,
         EventBusModule,
         ConfigModule,
         ServiceModule.forPlugin(),
@@ -37,7 +36,7 @@ import { WorkerServiceModule } from '../worker/worker-service.module';
         HealthCheckModule,
     ],
     exports: [
-        DataImportModule,
+        // DataImportModule,
         EventBusModule,
         ConfigModule,
         ServiceModule.forPlugin(),
