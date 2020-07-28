@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { ConfigModule } from '../config/config.module';
+import { DataImportModule } from '../data-import/data-import.module';
 import { EventBusModule } from '../event-bus/event-bus.module';
 import { HealthCheckModule } from '../health-check/health-check.module';
 import { JobQueueModule } from '../job-queue/job-queue.module';
@@ -15,6 +16,7 @@ import { WorkerServiceModule } from '../worker/worker-service.module';
  *
  * The PluginCommonModule exports:
  *
+ * * `DataImportModule`, allowing the injection of the various import services such as FastImporterService, AssetImporter etc..
  * * `EventBusModule`, allowing the injection of the {@link EventBus} service.
  * * `ServiceModule` allowing the injection of any of the various entity services such as ProductService, OrderService etc.
  * * `ConfigModule`, allowing the injection of the ConfigService.
@@ -26,6 +28,7 @@ import { WorkerServiceModule } from '../worker/worker-service.module';
  */
 @Module({
     imports: [
+        DataImportModule,
         EventBusModule,
         ConfigModule,
         ServiceModule.forPlugin(),
@@ -34,6 +37,7 @@ import { WorkerServiceModule } from '../worker/worker-service.module';
         HealthCheckModule,
     ],
     exports: [
+        DataImportModule,
         EventBusModule,
         ConfigModule,
         ServiceModule.forPlugin(),
