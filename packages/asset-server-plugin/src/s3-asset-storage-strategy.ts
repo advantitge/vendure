@@ -1,4 +1,4 @@
-import { AssetStorageStrategy, Injector, Logger } from '@vendure/core';
+import { AssetStorageStrategy, Logger } from '@vendure/core';
 import { Request } from 'express';
 import { Readable, Stream } from 'stream';
 
@@ -21,7 +21,22 @@ export type S3CredentialsProfile = {
  * @docsCategory asset-server-plugin
  * @docsPage S3AssetStorageStrategy
  */
-export interface S3Config {
+interface S3BaseConfig {
+    /**
+     * @description
+     * The S3 bucket in which to store the assets. If it does not exist, it will be created on startup.
+     */
+    bucket: string;
+}
+
+/**
+ * @description
+ * Configuration for connecting to AWS S3.
+ *
+ * @docsCategory asset-server-plugin
+ * @docsPage S3AssetStorageStrategy
+ */
+export interface S3CredentialConfig extends S3BaseConfig {
     /**
      * @description
      * The credentials used to access your s3 account. You can supply either the access key ID & secret,
@@ -32,14 +47,17 @@ export interface S3Config {
     credentials: S3Credentials | S3CredentialsProfile;
     /**
      * @description
-     * The S3 bucket in which to store the assets. If it does not exist, it will be created on startup.
-     */
-    bucket: string;
-    /**
-     * @description
      * The AWS region in which to host the assets.
      */
     region?: string;
+}
+
+export interface S3ClientConfig extends S3BaseConfig {
+    /**
+     * @description
+     * The configuation of the S3 client
+     */
+    client: import('aws-sdk').S3.Types.ClientConfiguration;
 }
 
 /**
@@ -74,7 +92,7 @@ export interface S3Config {
  * @docsCategory asset-server-plugin
  * @docsPage S3AssetStorageStrategy
  */
-export function configureS3AssetStorage(s3Config: S3Config) {
+export function configureS3AssetStorage(s3Config: S3CredentialConfig | S3ClientConfig) {
     return (options: AssetServerOptions) => {
         const { assetUrlPrefix, route } = options;
         const toAbsoluteUrlFn = (request: Request, identifier: string): string => {
@@ -109,8 +127,8 @@ export class S3AssetStorageStrategy implements AssetStorageStrategy {
     private AWS: typeof import('aws-sdk');
     private s3: import('aws-sdk').S3;
     constructor(
-        private s3Config: S3Config,
-        public readonly toAbsoluteUrl: (reqest: Request, identifier: string) => string,
+        private s3Config: S3CredentialConfig | S3ClientConfig,
+        public readonly toAbsoluteUrl: (request: Request, identifier: string) => string,
     ) {}
 
     async init() {
@@ -124,11 +142,15 @@ export class S3AssetStorageStrategy implements AssetStorageStrategy {
             );
         }
 
-        this.setCredentials();
-        if (this.s3Config.region) {
-            this.AWS.config.update({ region: this.s3Config.region });
+        if (this.isCredentialConfig(this.s3Config)) {
+            this.setCredentials(this.s3Config.credentials);
+            if (this.s3Config.region) {
+                this.AWS.config.update({ region: this.s3Config.region });
+            }
+            this.s3 = new this.AWS.S3();
+        } else {
+            this.s3 = new this.AWS.S3(this.s3Config.client);
         }
-        this.s3 = new this.AWS.S3();
         await this.ensureBucket(this.s3Config.bucket);
     }
 
@@ -196,8 +218,7 @@ export class S3AssetStorageStrategy implements AssetStorageStrategy {
         };
     }
 
-    private setCredentials() {
-        const { credentials } = this.s3Config;
+    private setCredentials(credentials: S3Credentials | S3CredentialsProfile) {
         if (this.isCredentialsProfile(credentials)) {
             this.AWS.config.credentials = new this.AWS.SharedIniFileCredentials(credentials);
         } else {
@@ -222,6 +243,10 @@ export class S3AssetStorageStrategy implements AssetStorageStrategy {
                 Logger.error(`Could not find nor create the S3 bucket "${bucket}"`, loggerCtx, e.stack);
             }
         }
+    }
+
+    private isCredentialConfig(config: S3CredentialConfig | S3ClientConfig): config is S3CredentialConfig {
+        return config.hasOwnProperty('credentials');
     }
 
     private isCredentialsProfile(
