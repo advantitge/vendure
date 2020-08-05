@@ -171,6 +171,18 @@ export type AssignProductsToChannelInput = {
   priceFactor?: Maybe<Scalars['Float']>;
 };
 
+export type AuthenticationInput = {
+  native?: Maybe<NativeAuthInput>;
+};
+
+export type AuthenticationMethod = Node & {
+   __typename?: 'AuthenticationMethod';
+  id: Scalars['ID'];
+  createdAt: Scalars['DateTime'];
+  updatedAt: Scalars['DateTime'];
+  strategy: Scalars['String'];
+};
+
 export type BooleanCustomFieldConfig = CustomField & {
    __typename?: 'BooleanCustomFieldConfig';
   name: Scalars['String'];
@@ -571,6 +583,7 @@ export type CreateShippingMethodInput = {
   description: Scalars['String'];
   checker: ConfigurableOperationInput;
   calculator: ConfigurableOperationInput;
+  customFields?: Maybe<Scalars['JSON']>;
 };
 
 export type CreateTaxCategoryInput = {
@@ -1064,6 +1077,7 @@ export type CustomFields = {
   ProductOptionGroup: Array<CustomFieldConfig>;
   ProductVariant: Array<CustomFieldConfig>;
   User: Array<CustomFieldConfig>;
+  ShippingMethod: Array<CustomFieldConfig>;
 };
 
 export type DateOperators = {
@@ -1774,6 +1788,8 @@ export type Mutation = {
   assignProductsToChannel: Array<Product>;
   /** Assign a Role to an Administrator */
   assignRoleToAdministrator: Administrator;
+  /** Authenticates the user using a named authentication strategy */
+  authenticate: LoginResult;
   cancelOrder: Order;
   /** Create a new Administrator */
   createAdministrator: Administrator;
@@ -1814,6 +1830,8 @@ export type Mutation = {
   createTaxRate: TaxRate;
   /** Create a new Zone */
   createZone: Zone;
+  /** Delete an Administrator */
+  deleteAdministrator: DeletionResponse;
   /** Delete an Asset */
   deleteAsset: DeletionResponse;
   /** Delete multiple Assets */
@@ -1853,6 +1871,10 @@ export type Mutation = {
   deleteZone: DeletionResponse;
   fulfillOrder: Fulfillment;
   importProducts?: Maybe<ImportInfo>;
+  /**
+   * Authenticates the user using the native authentication strategy. This mutation
+   * is an alias for `authenticate({ native: { ... }})`
+   */
   login: LoginResult;
   logout: Scalars['Boolean'];
   /** Move a Collection to a different parent or index */
@@ -1874,9 +1896,11 @@ export type Mutation = {
   setActiveChannel: UserStatus;
   setAsLoggedIn: UserStatus;
   setAsLoggedOut: UserStatus;
+  setOrderCustomFields?: Maybe<Order>;
   setUiLanguage?: Maybe<LanguageCode>;
   settlePayment: Payment;
   settleRefund: Refund;
+  transitionOrderToState?: Maybe<Order>;
   /** Update an existing Administrator */
   updateAdministrator: Administrator;
   /** Update an existing Asset */
@@ -1961,6 +1985,12 @@ export type MutationAssignProductsToChannelArgs = {
 export type MutationAssignRoleToAdministratorArgs = {
   administratorId: Scalars['ID'];
   roleId: Scalars['ID'];
+};
+
+
+export type MutationAuthenticateArgs = {
+  input: AuthenticationInput;
+  rememberMe?: Maybe<Scalars['Boolean']>;
 };
 
 
@@ -2068,6 +2098,11 @@ export type MutationCreateTaxRateArgs = {
 
 export type MutationCreateZoneArgs = {
   input: CreateZoneInput;
+};
+
+
+export type MutationDeleteAdministratorArgs = {
+  id: Scalars['ID'];
 };
 
 
@@ -2241,6 +2276,11 @@ export type MutationSetAsLoggedInArgs = {
 };
 
 
+export type MutationSetOrderCustomFieldsArgs = {
+  input: UpdateOrderInput;
+};
+
+
 export type MutationSetUiLanguageArgs = {
   languageCode?: Maybe<LanguageCode>;
 };
@@ -2253,6 +2293,12 @@ export type MutationSettlePaymentArgs = {
 
 export type MutationSettleRefundArgs = {
   input: SettleRefundInput;
+};
+
+
+export type MutationTransitionOrderToStateArgs = {
+  id: Scalars['ID'];
+  state: Scalars['String'];
 };
 
 
@@ -2380,6 +2426,11 @@ export type MutationUpdateZoneArgs = {
   input: UpdateZoneInput;
 };
 
+export type NativeAuthInput = {
+  username: Scalars['String'];
+  password: Scalars['String'];
+};
+
 export type NetworkStatus = {
    __typename?: 'NetworkStatus';
   inFlightRequests: Scalars['Int'];
@@ -2405,6 +2456,7 @@ export type NumberRange = {
 
 export type Order = Node & {
    __typename?: 'Order';
+  nextStates: Array<Scalars['String']>;
   id: Scalars['ID'];
   createdAt: Scalars['DateTime'];
   updatedAt: Scalars['DateTime'];
@@ -2519,6 +2571,12 @@ export type OrderListOptions = {
   take?: Maybe<Scalars['Int']>;
   sort?: Maybe<OrderSortParameter>;
   filter?: Maybe<OrderFilterParameter>;
+};
+
+export type OrderProcessState = {
+   __typename?: 'OrderProcessState';
+  name: Scalars['String'];
+  to: Array<Scalars['String']>;
 };
 
 export type OrderSortParameter = {
@@ -2694,6 +2752,7 @@ export type ProductOption = Node & {
   code: Scalars['String'];
   name: Scalars['String'];
   groupId: Scalars['ID'];
+  group: ProductOptionGroup;
   translations: Array<ProductOptionTranslation>;
   customFields?: Maybe<Scalars['JSON']>;
 };
@@ -2779,6 +2838,7 @@ export type ProductVariant = Node & {
   trackInventory: Scalars['Boolean'];
   stockMovements: StockMovementList;
   id: Scalars['ID'];
+  product: Product;
   productId: Scalars['ID'];
   createdAt: Scalars['DateTime'];
   updatedAt: Scalars['DateTime'];
@@ -3330,6 +3390,7 @@ export type SearchResultSortParameter = {
 
 export type ServerConfig = {
    __typename?: 'ServerConfig';
+  orderProcess: Array<OrderProcessState>;
   customFieldConfig: CustomFields;
 };
 
@@ -3347,6 +3408,7 @@ export type ShippingMethod = Node & {
   description: Scalars['String'];
   checker: ConfigurableOperation;
   calculator: ConfigurableOperation;
+  customFields?: Maybe<Scalars['JSON']>;
 };
 
 export type ShippingMethodFilterParameter = {
@@ -3657,6 +3719,11 @@ export type UpdateGlobalSettingsInput = {
   customFields?: Maybe<Scalars['JSON']>;
 };
 
+export type UpdateOrderInput = {
+  id: Scalars['ID'];
+  customFields?: Maybe<Scalars['JSON']>;
+};
+
 export type UpdateOrderNoteInput = {
   noteId: Scalars['ID'];
   note?: Maybe<Scalars['String']>;
@@ -3735,6 +3802,7 @@ export type UpdateShippingMethodInput = {
   description?: Maybe<Scalars['String']>;
   checker?: Maybe<ConfigurableOperationInput>;
   calculator?: Maybe<ConfigurableOperationInput>;
+  customFields?: Maybe<Scalars['JSON']>;
 };
 
 export type UpdateTaxCategoryInput = {
@@ -3766,7 +3834,8 @@ export type User = Node & {
   identifier: Scalars['String'];
   verified: Scalars['Boolean'];
   roles: Array<Role>;
-  lastLogin?: Maybe<Scalars['String']>;
+  lastLogin?: Maybe<Scalars['DateTime']>;
+  authenticationMethods: Array<AuthenticationMethod>;
   customFields?: Maybe<Scalars['JSON']>;
 };
 
@@ -3871,6 +3940,19 @@ export type UpdateAdministratorMutation = (
   & { updateAdministrator: (
     { __typename?: 'Administrator' }
     & AdministratorFragment
+  ) }
+);
+
+export type DeleteAdministratorMutationVariables = {
+  id: Scalars['ID'];
+};
+
+
+export type DeleteAdministratorMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteAdministrator: (
+    { __typename?: 'DeletionResponse' }
+    & Pick<DeletionResponse, 'result' | 'message'>
   ) }
 );
 
@@ -4723,7 +4805,7 @@ export type OrderAddressFragment = (
 
 export type OrderFragment = (
   { __typename?: 'Order' }
-  & Pick<Order, 'id' | 'createdAt' | 'updatedAt' | 'code' | 'state' | 'total' | 'currencyCode'>
+  & Pick<Order, 'id' | 'createdAt' | 'updatedAt' | 'code' | 'state' | 'nextStates' | 'total' | 'currencyCode'>
   & { customer?: Maybe<(
     { __typename?: 'Customer' }
     & Pick<Customer, 'id' | 'firstName' | 'lastName'>
@@ -4759,7 +4841,7 @@ export type OrderLineFragment = (
 
 export type OrderDetailFragment = (
   { __typename?: 'Order' }
-  & Pick<Order, 'id' | 'createdAt' | 'updatedAt' | 'code' | 'state' | 'active' | 'subTotal' | 'subTotalBeforeTax' | 'totalBeforeTax' | 'currencyCode' | 'shipping' | 'shippingWithTax' | 'total'>
+  & Pick<Order, 'id' | 'createdAt' | 'updatedAt' | 'code' | 'state' | 'nextStates' | 'active' | 'subTotal' | 'subTotalBeforeTax' | 'totalBeforeTax' | 'currencyCode' | 'shipping' | 'shippingWithTax' | 'total'>
   & { customer?: Maybe<(
     { __typename?: 'Customer' }
     & Pick<Customer, 'id' | 'firstName' | 'lastName'>
@@ -4956,6 +5038,33 @@ export type DeleteOrderNoteMutation = (
     { __typename?: 'DeletionResponse' }
     & Pick<DeletionResponse, 'result' | 'message'>
   ) }
+);
+
+export type TransitionOrderToStateMutationVariables = {
+  id: Scalars['ID'];
+  state: Scalars['String'];
+};
+
+
+export type TransitionOrderToStateMutation = (
+  { __typename?: 'Mutation' }
+  & { transitionOrderToState?: Maybe<(
+    { __typename?: 'Order' }
+    & OrderFragment
+  )> }
+);
+
+export type UpdateOrderCustomFieldsMutationVariables = {
+  input: UpdateOrderInput;
+};
+
+
+export type UpdateOrderCustomFieldsMutation = (
+  { __typename?: 'Mutation' }
+  & { setOrderCustomFields?: Maybe<(
+    { __typename?: 'Order' }
+    & OrderFragment
+  )> }
 );
 
 export type AssetFragment = (
@@ -6231,7 +6340,10 @@ export type GetServerConfigQuery = (
     { __typename?: 'GlobalSettings' }
     & { serverConfig: (
       { __typename?: 'ServerConfig' }
-      & { customFieldConfig: (
+      & { orderProcess: Array<(
+        { __typename?: 'OrderProcessState' }
+        & Pick<OrderProcessState, 'name' | 'to'>
+      )>, customFieldConfig: (
         { __typename?: 'CustomFields' }
         & { Address: Array<(
           { __typename?: 'StringCustomFieldConfig' }
@@ -6432,6 +6544,24 @@ export type GetServerConfigQuery = (
           { __typename?: 'DateTimeCustomFieldConfig' }
           & CustomFields_DateTimeCustomFieldConfig_Fragment
         )>, ProductVariant: Array<(
+          { __typename?: 'StringCustomFieldConfig' }
+          & CustomFields_StringCustomFieldConfig_Fragment
+        ) | (
+          { __typename?: 'LocaleStringCustomFieldConfig' }
+          & CustomFields_LocaleStringCustomFieldConfig_Fragment
+        ) | (
+          { __typename?: 'IntCustomFieldConfig' }
+          & CustomFields_IntCustomFieldConfig_Fragment
+        ) | (
+          { __typename?: 'FloatCustomFieldConfig' }
+          & CustomFields_FloatCustomFieldConfig_Fragment
+        ) | (
+          { __typename?: 'BooleanCustomFieldConfig' }
+          & CustomFields_BooleanCustomFieldConfig_Fragment
+        ) | (
+          { __typename?: 'DateTimeCustomFieldConfig' }
+          & CustomFields_DateTimeCustomFieldConfig_Fragment
+        )>, ShippingMethod: Array<(
           { __typename?: 'StringCustomFieldConfig' }
           & CustomFields_StringCustomFieldConfig_Fragment
         ) | (
@@ -6748,6 +6878,12 @@ export namespace UpdateAdministrator {
   export type Variables = UpdateAdministratorMutationVariables;
   export type Mutation = UpdateAdministratorMutation;
   export type UpdateAdministrator = AdministratorFragment;
+}
+
+export namespace DeleteAdministrator {
+  export type Variables = DeleteAdministratorMutationVariables;
+  export type Mutation = DeleteAdministratorMutation;
+  export type DeleteAdministrator = DeleteAdministratorMutation['deleteAdministrator'];
 }
 
 export namespace GetRoles {
@@ -7239,6 +7375,18 @@ export namespace DeleteOrderNote {
   export type Variables = DeleteOrderNoteMutationVariables;
   export type Mutation = DeleteOrderNoteMutation;
   export type DeleteOrderNote = DeleteOrderNoteMutation['deleteOrderNote'];
+}
+
+export namespace TransitionOrderToState {
+  export type Variables = TransitionOrderToStateMutationVariables;
+  export type Mutation = TransitionOrderToStateMutation;
+  export type TransitionOrderToState = OrderFragment;
+}
+
+export namespace UpdateOrderCustomFields {
+  export type Variables = UpdateOrderCustomFieldsMutationVariables;
+  export type Mutation = UpdateOrderCustomFieldsMutation;
+  export type SetOrderCustomFields = OrderFragment;
 }
 
 export namespace Asset {
@@ -7789,6 +7937,7 @@ export namespace GetServerConfig {
   export type Query = GetServerConfigQuery;
   export type GlobalSettings = GetServerConfigQuery['globalSettings'];
   export type ServerConfig = GetServerConfigQuery['globalSettings']['serverConfig'];
+  export type OrderProcess = (NonNullable<GetServerConfigQuery['globalSettings']['serverConfig']['orderProcess'][0]>);
   export type CustomFieldConfig = GetServerConfigQuery['globalSettings']['serverConfig']['customFieldConfig'];
   export type Address = CustomFieldsFragment;
   export type Collection = CustomFieldsFragment;
@@ -7802,6 +7951,7 @@ export namespace GetServerConfig {
   export type ProductOption = CustomFieldsFragment;
   export type ProductOptionGroup = CustomFieldsFragment;
   export type ProductVariant = CustomFieldsFragment;
+  export type ShippingMethod = CustomFieldsFragment;
   export type User = CustomFieldsFragment;
 }
 

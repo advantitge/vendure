@@ -42,6 +42,7 @@ export const ORDER_FRAGMENT = gql`
         updatedAt
         code
         state
+        nextStates
         total
         currencyCode
         customer {
@@ -102,6 +103,7 @@ export const ORDER_DETAIL_FRAGMENT = gql`
         updatedAt
         code
         state
+        nextStates
         active
         customer {
             id
@@ -289,4 +291,22 @@ export const DELETE_ORDER_NOTE = gql`
             message
         }
     }
+`;
+
+export const TRANSITION_ORDER_TO_STATE = gql`
+    mutation TransitionOrderToState($id: ID!, $state: String!) {
+        transitionOrderToState(id: $id, state: $state) {
+            ...Order
+        }
+    }
+    ${ORDER_FRAGMENT}
+`;
+
+export const UPDATE_ORDER_CUSTOM_FIELDS = gql`
+    mutation UpdateOrderCustomFields($input: UpdateOrderInput!) {
+        setOrderCustomFields(input: $input) {
+            ...Order
+        }
+    }
+    ${ORDER_FRAGMENT}
 `;

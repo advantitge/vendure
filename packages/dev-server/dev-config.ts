@@ -39,6 +39,7 @@ export const devConfig: VendureConfig = {
     },
     authOptions: {
         disableAuth: false,
+        tokenMethod: 'cookie',
         sessionSecret: 'some-secret',
         requireVerification: true,
     },
@@ -52,7 +53,7 @@ export const devConfig: VendureConfig = {
         paymentMethodHandlers: [examplePaymentHandler],
     },
     customFields: {},
-    logger: new DefaultLogger({ level: LogLevel.Info }),
+    logger: new DefaultLogger({ level: LogLevel.Debug }),
     importExportOptions: {
         importAssetsDir: path.join(__dirname, 'import-assets'),
     },
@@ -119,7 +120,7 @@ function getDbConfig(): ConnectionOptions {
         default:
             console.log('Using mysql connection');
             return {
-                synchronize: true,
+                synchronize: false,
                 type: 'mysql',
                 host: '127.0.0.1',
                 port: 3306,

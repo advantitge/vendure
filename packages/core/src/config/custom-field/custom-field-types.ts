@@ -82,7 +82,8 @@ export type CustomFieldConfig =
  * * `validate?: (value: any) => string | LocalizedString[] | void`: A custom validation function.
  *
  * The `LocalizedString` type looks like this:
- * ```
+ *
+ * ```TypeScript
  * type LocalizedString = {
  *   languageCode: LanguageCode;
  *   value: string;
@@ -149,6 +150,7 @@ export interface CustomFields {
     ProductOptionGroup?: CustomFieldConfig[];
     ProductVariant?: CustomFieldConfig[];
     User?: CustomFieldConfig[];
+    ShippingMethod?: CustomFieldConfig[];
 }
 
 /**

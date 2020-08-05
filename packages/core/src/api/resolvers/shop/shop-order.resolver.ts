@@ -7,6 +7,7 @@ import {
     MutationRemoveOrderLineArgs,
     MutationSetCustomerForOrderArgs,
     MutationSetOrderBillingAddressArgs,
+    MutationSetOrderCustomFieldsArgs,
     MutationSetOrderShippingAddressArgs,
     MutationSetOrderShippingMethodArgs,
     MutationTransitionOrderToStateArgs,
@@ -18,16 +19,16 @@ import {
 import { QueryCountriesArgs } from '@vendure/common/lib/generated-types';
 import ms from 'ms';
 
-import { ForbiddenError, InternalServerError } from '../../../common/error/errors';
+import { ForbiddenError, IllegalOperationError, InternalServerError } from '../../../common/error/errors';
 import { Translated } from '../../../common/types/locale-types';
 import { idsAreEqual } from '../../../common/utils';
 import { Country } from '../../../entity';
 import { Order } from '../../../entity/order/order.entity';
 import { CountryService } from '../../../service';
 import { OrderState } from '../../../service/helpers/order-state-machine/order-state';
-import { AuthService } from '../../../service/services/auth.service';
 import { CustomerService } from '../../../service/services/customer.service';
 import { OrderService } from '../../../service/services/order.service';
+import { SessionService } from '../../../service/services/session.service';
 import { RequestContext } from '../../common/request-context';
 import { Allow } from '../../decorators/allow.decorator';
 import { Ctx } from '../../decorators/request-context.decorator';
@@ -37,7 +38,7 @@ export class ShopOrderResolver {
     constructor(
         private orderService: OrderService,
         private customerService: CustomerService,
-        private authService: AuthService,
+        private sessionService: SessionService,
         private countryService: CountryService,
     ) {}
 
@@ -179,9 +180,23 @@ export class ShopOrderResolver {
         }
     }
 
+    @Mutation()
+    @Allow(Permission.Owner)
+    async setOrderCustomFields(
+        @Ctx() ctx: RequestContext,
+        @Args() args: MutationSetOrderCustomFieldsArgs,
+    ): Promise<Order | undefined> {
+        if (ctx.authorizedAsOwnerOnly) {
+            const sessionOrder = await this.getOrderFromContext(ctx);
+            if (sessionOrder) {
+                return this.orderService.updateCustomFields(ctx, sessionOrder.id, args.input.customFields);
+            }
+        }
+    }
+
     @Query()
     @Allow(Permission.Owner)
-    async nextOrderStates(@Ctx() ctx: RequestContext): Promise<string[]> {
+    async nextOrderStates(@Ctx() ctx: RequestContext): Promise<ReadonlyArray<string>> {
         if (ctx.authorizedAsOwnerOnly) {
             const sessionOrder = await this.getOrderFromContext(ctx, true);
             return this.orderService.getNextOrderStates(sessionOrder);
@@ -278,7 +293,7 @@ export class ShopOrderResolver {
                         );
                         // If the Customer has no addresses yet, use the shipping address data
                         // to populate the initial default Address.
-                        if (addresses.length === 0) {
+                        if (addresses.length === 0 && order.shippingAddress?.country) {
                             const address = order.shippingAddress;
                             await this.customerService.createAddress(ctx, order.customer.id as string, {
                                 ...address,
@@ -291,13 +306,8 @@ export class ShopOrderResolver {
                         }
                     }
                 }
-                if (
-                    order.active === false &&
-                    ctx.session &&
-                    ctx.session.activeOrder &&
-                    ctx.session.activeOrder.id === sessionOrder.id
-                ) {
-                    await this.authService.unsetActiveOrder(ctx.session);
+                if (order.active === false && ctx.session?.activeOrderId === sessionOrder.id) {
+                    await this.sessionService.unsetActiveOrder(ctx.session);
                 }
                 return order;
             }
@@ -308,6 +318,9 @@ export class ShopOrderResolver {
     @Allow(Permission.Owner)
     async setCustomerForOrder(@Ctx() ctx: RequestContext, @Args() args: MutationSetCustomerForOrderArgs) {
         if (ctx.authorizedAsOwnerOnly) {
+            if (ctx.activeUserId) {
+                throw new IllegalOperationError('error.cannot-set-customer-for-order-when-logged-in');
+            }
             const sessionOrder = await this.getOrderFromContext(ctx);
             if (sessionOrder) {
                 const customer = await this.customerService.createOrUpdate(args.input, true);
@@ -325,16 +338,18 @@ export class ShopOrderResolver {
         if (!ctx.session) {
             throw new InternalServerError(`error.no-active-session`);
         }
-        let order = ctx.session.activeOrder;
+        let order = ctx.session.activeOrderId
+            ? await this.orderService.findOne(ctx, ctx.session.activeOrderId)
+            : undefined;
         if (order && order.active === false) {
             // edge case where an inactive order may not have been
             // removed from the session, i.e. the regular process was interrupted
-            await this.authService.unsetActiveOrder(ctx.session);
-            order = null;
+            await this.sessionService.unsetActiveOrder(ctx.session);
+            order = undefined;
         }
         if (!order) {
             if (ctx.activeUserId) {
-                order = (await this.orderService.getActiveOrderForUser(ctx, ctx.activeUserId)) || null;
+                order = await this.orderService.getActiveOrderForUser(ctx, ctx.activeUserId);
             }
 
             if (!order && createIfNotExists) {
@@ -342,7 +357,7 @@ export class ShopOrderResolver {
             }
 
             if (order) {
-                await this.authService.setActiveOrder(ctx.session, order);
+                await this.sessionService.setActiveOrder(ctx.session, order);
             }
         }
         return order || undefined;
